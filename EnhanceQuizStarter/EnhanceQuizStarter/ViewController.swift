@@ -8,10 +8,6 @@
 
 import UIKit
 import GameKit
-import AudioToolbox
-
-// TODO: Todo list
-// 1. Refactor code to be neater
 
 class ViewController: UIViewController {
   // MARK: - Properties
@@ -21,11 +17,11 @@ class ViewController: UIViewController {
   var indexOfSelectedQuestion = 0
   
   let quizManager = QuizManager()
+  let soundManager = SoundManager()
   
-  
+  var buttonArray: [UIButton] = []
   var isGameOver: Bool = false
-  
-  var gameSound: SystemSoundID = 0
+  var question: Question!
 
   // MARK: - Outlets
   @IBOutlet weak var questionField: UILabel!
@@ -39,52 +35,46 @@ class ViewController: UIViewController {
   
   override func viewDidLoad() {
     super.viewDidLoad()
+    buttonArray = [firstOptionButton, secondOptionButton, thirdOptionButton, fourthOptionButton]
+
+    soundManager.loadGameStartSound()
+    soundManager.playGameStartSound()
     
-    loadGameStartSound()
-    playGameStartSound()
-    
+    setupButtons()
     displayQuestion()
   }
-
-  // MARK: - Helpers
-  func loadGameStartSound() {
-    let path = Bundle.main.path(forResource: "GameSound", ofType: "wav")
-    let soundUrl = URL(fileURLWithPath: path!)
-    AudioServicesCreateSystemSoundID(soundUrl as CFURL, &gameSound)
-  }
-
-  func playGameStartSound() {
-    AudioServicesPlaySystemSound(gameSound)
-  }
-
   
-  func displayQuestion() {
-    isGameOver = false
-    playAgainButton.setTitle("Next Question", for: .normal)
-    
-    // Reset button colors
-    let buttonArray = [firstOptionButton, secondOptionButton, thirdOptionButton, fourthOptionButton]
-    for button in buttonArray {
-      button?.alpha = 1.0
-      button?.backgroundColor = UIColor(red: 12/255, green: 121/255, blue: 150/255, alpha: 1.0)
-    }
-    
-    // Chooses a question randomly
-    let finalQuestion = quizManager.randomQuestion()
-
-    questionField.text = finalQuestion.question
-    resultField.text = ""
-    playAgainButton.isHidden = true
-    
+  func setupButtons() {
     // Set a tag number to each button
     firstOptionButton.tag = 0
     secondOptionButton.tag = 1
     thirdOptionButton.tag = 2
     fourthOptionButton.tag = 3
     
-    // Matches tag of buttons with the options index and sets the title
-    for (index, item) in finalQuestion.options.enumerated() {
-      print("\(index) of \(item)")
+    // Round the corners of buttons
+    let radiusConstant: CGFloat = 10
+    
+    firstOptionButton.layer.cornerRadius = radiusConstant
+    secondOptionButton.layer.cornerRadius = radiusConstant
+    thirdOptionButton.layer.cornerRadius = radiusConstant
+    fourthOptionButton.layer.cornerRadius = radiusConstant
+    playAgainButton.layer.cornerRadius = radiusConstant
+  }
+
+  // Displays a random question
+  func displayQuestion() {
+    isGameOver = false
+    playAgainButton.setTitle("Next Question", for: .normal)
+    
+    question = quizManager.randomQuestion()
+    let randomQuestion = question.question
+    
+    questionField.text = randomQuestion
+    resultField.text = ""
+    playAgainButton.isHidden = true
+    
+    // Matches the buttons tag with the options index and sets the title
+    for (index, item) in question.options.enumerated() {
       if index == firstOptionButton.tag {
         firstOptionButton.setTitle(item, for: .normal)
       }
@@ -99,8 +89,8 @@ class ViewController: UIViewController {
       }
     }
 
-    // Matches amount of choices to display
-    if finalQuestion.options.count == 2 {
+    // Matches amount of choices to display 2 or 4 buttons
+    if question.options.count == 2 {
       thirdOptionButton.isHidden = true
       fourthOptionButton.isHidden = true
     } else {
@@ -109,17 +99,9 @@ class ViewController: UIViewController {
       thirdOptionButton.isHidden = false
       fourthOptionButton.isHidden = false
     }
-    
-    // Round edges of buttons
-    firstOptionButton.layer.cornerRadius = 10
-    secondOptionButton.layer.cornerRadius = 10
-    thirdOptionButton.layer.cornerRadius = 10
-    fourthOptionButton.layer.cornerRadius = 10
-    playAgainButton.layer.cornerRadius = 10
   }
   
   func displayScore() {
-    
     // Hide the answer buttons
     firstOptionButton.isHidden = true
     secondOptionButton.isHidden = true
@@ -131,7 +113,6 @@ class ViewController: UIViewController {
     playAgainButton.isHidden = false
     
     resultField.text = ""
-
     questionField.text = "Way to go!\nYou got \(correctQuestions) out of \(questionsPerRound) correct!"
   }
 
@@ -147,42 +128,35 @@ class ViewController: UIViewController {
     }
   }
 
-//  func loadNextRound(delay seconds: Int) {
-//    // Converts a delay in seconds to nanoseconds as signed 64 bit integer
-//    let delay = Int64(NSEC_PER_SEC * UInt64(seconds))
-//    // Calculates a time value to execute the method given current time and delay
-//    let dispatchTime = DispatchTime.now() + Double(delay) / Double(NSEC_PER_SEC)
-//
-//    // Executes the nextRound method at the dispatch time on the main queue
-//    DispatchQueue.main.asyncAfter(deadline: dispatchTime) {
-//      self.nextRound()
-//    }
-//  }
-
   // MARK: - Actions
   @IBAction func checkAnswer(_ sender: UIButton) {
     // Increment the questions asked counter
     questionsAsked += 1
+    
+    // Compare button.tag with question.answer
+    let checkFirstOption = quizManager.checkAnswer(question: question, button: firstOptionButton)
+    let checkSecondOption = quizManager.checkAnswer(question: question, button: secondOptionButton)
+    let checkThirdOption = quizManager.checkAnswer(question: question, button: thirdOptionButton)
+    let checkFourthOption = quizManager.checkAnswer(question: question, button: fourthOptionButton)
 
-    let buttonArray = [firstOptionButton, secondOptionButton, thirdOptionButton, fourthOptionButton]
+    if (sender === firstOptionButton && checkFirstOption == true) ||
+      (sender === secondOptionButton && checkSecondOption == true) ||
+      (sender === thirdOptionButton && checkThirdOption == true) ||
+      (sender === fourthOptionButton && checkFourthOption == true) {
     
-    let finalQuestion = quizManager.randomQuestion()
-    let correctAnswer = finalQuestion.answer
-    
-    if (sender === firstOptionButton && correctAnswer == 1) || (sender === secondOptionButton && correctAnswer == 2) || (sender === thirdOptionButton && correctAnswer == 3) || (sender === fourthOptionButton && correctAnswer == 4) {
-      
       correctQuestions += 1
-      
+    
       for button in buttonArray {
-        button?.isEnabled = false
+        button.isEnabled = false
       }
       
       sender.isEnabled = true
       resultField.text = "Correct!"
+      
     } else {
       
       for button in buttonArray {
-        button?.isEnabled = false
+        button.isEnabled = false
       }
       
       sender.isEnabled = true
@@ -190,14 +164,12 @@ class ViewController: UIViewController {
     }
     
     playAgainButton.isHidden = false
-//    loadNextRound(delay: 3)
   }
 
   @IBAction func playAgain(_ sender: UIButton) {
-    // Enables the buttons
-    let buttonArray = [firstOptionButton, secondOptionButton, thirdOptionButton, fourthOptionButton]
+    // Enable the buttons
     for button in buttonArray {
-      button?.isEnabled = true
+      button.isEnabled = true
     }
     
     // If game is over display "Play Again" else "Next Question"
@@ -210,24 +182,15 @@ class ViewController: UIViewController {
       thirdOptionButton.isHidden = false
       fourthOptionButton.isHidden = false
       
-      // Reset button colors
-      for button in buttonArray {
-        button?.alpha = 1.0
-        button?.backgroundColor = UIColor(red: 12/255, green: 121/255, blue: 150/255, alpha: 1.0)
-      }
       // Reset game
       questionsAsked = 0
       correctQuestions = 0
       nextRound()
+      
     } else if isGameOver == false {
       playAgainButton.setTitle("Next Question", for: .normal)
-      // Reset button colors
-      let buttonArray = [firstOptionButton, secondOptionButton, thirdOptionButton, fourthOptionButton]
-      for button in buttonArray {
-        button?.alpha = 1.0
-        button?.backgroundColor = UIColor(red: 12/255, green: 121/255, blue: 150/255, alpha: 1.0)
-      }
       nextRound()
     }
   }
+  
 }

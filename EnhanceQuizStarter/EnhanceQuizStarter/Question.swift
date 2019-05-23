@@ -6,8 +6,6 @@
 //  Copyright © 2019 Treehouse. All rights reserved.
 //
 
-import Foundation
-
 struct Question {
   let question: String
   let options: [String]
