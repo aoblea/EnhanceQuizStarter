@@ -21,7 +21,7 @@ class ViewController: UIViewController {
   
   var buttonArray: [UIButton] = []
   var isGameOver: Bool = false
-  var question: Question!
+  var finalQuestion: Question!
 
   // MARK: - Outlets
   @IBOutlet weak var questionField: UILabel!
@@ -66,15 +66,15 @@ class ViewController: UIViewController {
     isGameOver = false
     playAgainButton.setTitle("Next Question", for: .normal)
     
-    question = quizManager.randomQuestion()
-    let randomQuestion = question.question
+    finalQuestion = quizManager.randomQuestion()
+    let randomQuestion = finalQuestion.question
     
     questionField.text = randomQuestion
     resultField.text = ""
     playAgainButton.isHidden = true
     
     // Matches the buttons tag with the options index and sets the title
-    for (index, item) in question.options.enumerated() {
+    for (index, item) in finalQuestion.options.enumerated() {
       if index == firstOptionButton.tag {
         firstOptionButton.setTitle(item, for: .normal)
       }
@@ -90,7 +90,7 @@ class ViewController: UIViewController {
     }
 
     // Matches amount of choices to display 2 or 4 buttons
-    if question.options.count == 2 {
+    if finalQuestion.options.count == 2 {
       thirdOptionButton.isHidden = true
       fourthOptionButton.isHidden = true
     } else {
@@ -134,10 +134,10 @@ class ViewController: UIViewController {
     questionsAsked += 1
     
     // Compare button.tag with question.answer
-    let checkFirstOption = quizManager.checkAnswer(question: question, button: firstOptionButton)
-    let checkSecondOption = quizManager.checkAnswer(question: question, button: secondOptionButton)
-    let checkThirdOption = quizManager.checkAnswer(question: question, button: thirdOptionButton)
-    let checkFourthOption = quizManager.checkAnswer(question: question, button: fourthOptionButton)
+    let checkFirstOption = quizManager.checkAnswer(question: finalQuestion, button: firstOptionButton)
+    let checkSecondOption = quizManager.checkAnswer(question: finalQuestion, button: secondOptionButton)
+    let checkThirdOption = quizManager.checkAnswer(question: finalQuestion, button: thirdOptionButton)
+    let checkFourthOption = quizManager.checkAnswer(question: finalQuestion, button: fourthOptionButton)
 
     if (sender === firstOptionButton && checkFirstOption == true) ||
       (sender === secondOptionButton && checkSecondOption == true) ||
